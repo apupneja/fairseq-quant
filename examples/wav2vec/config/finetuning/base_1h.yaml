@@ -14,11 +14,7 @@ checkpoint:
 
 task:
   _name: audio_finetuning
-<<<<<<< HEAD
   data: /data/anirudh/LibriSpeech/train
-=======
-  data: ???
->>>>>>> 4db264940f281a6f47558d17387b1455d4abd8d9
   normalize: false
   labels: ltr
 
@@ -26,14 +22,9 @@ dataset:
   num_workers: 6
   max_tokens: 3200000
   skip_invalid_size_inputs_valid_test: true
-  validate_after_updates: 10000
-<<<<<<< HEAD
-  validate_interval: 1
+  validate_after_updates: 100
+  validate_interval: 10
   valid_subset: test
-=======
-  validate_interval: 1000
-  valid_subset: dev_other
->>>>>>> 4db264940f281a6f47558d17387b1455d4abd8d9
 
 distributed_training:
   ddp_backend: legacy_ddp
@@ -61,11 +52,7 @@ lr_scheduler:
 
 model:
   _name: wav2vec_ctc
-<<<<<<< HEAD
   w2v_path: /data/anirudh/wav2vec_small.pt
-=======
-  w2v_path: ???
->>>>>>> 4db264940f281a6f47558d17387b1455d4abd8d9
   apply_mask: true
   mask_prob: 0.65
   mask_channel_prob: 0.25
