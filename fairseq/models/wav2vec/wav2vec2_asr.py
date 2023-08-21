@@ -591,8 +591,7 @@ class Wav2VecEncoder(FairseqEncoder):
         w2v_args = {
             "source": source,
             "padding_mask": padding_mask,
-            "mask": self.apply_mask and self.training,
-            "quantize": self.quantize
+            "mask": self.apply_mask and self.training
         }
         if "corpus_key" in kwargs:
             w2v_args["corpus_key"] = kwargs["corpus_key"]
@@ -604,6 +603,7 @@ class Wav2VecEncoder(FairseqEncoder):
 
         with torch.no_grad() if not ft else contextlib.ExitStack():
             print("check?")
+            print(self.quantize)
             res = self.w2v_model.extract_features(**w2v_args)
 
             x = res["x"]
