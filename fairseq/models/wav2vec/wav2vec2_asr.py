@@ -198,6 +198,7 @@ class Wav2Vec2AsrConfig(FairseqDataclass):
     freeze_regex: Optional[str] = field(
         default=None,
     )
+    quantize: bool = field(default=False, metadata={"help": "quaantize the model"})
 
 @dataclass
 class Wav2Vec2CtcConfig(Wav2Vec2AsrConfig):
@@ -369,7 +370,7 @@ class Wav2Vec2Seq2SeqModel(FairseqEncoderDecoderModel):
 class Wav2VecEncoder(FairseqEncoder):
     def __init__(self, cfg: Wav2Vec2AsrConfig, output_size=None):
         self.apply_mask = cfg.apply_mask
-
+        self.quantize = cfg.quantize
         arg_overrides = {
             "dropout": cfg.dropout,
             "activation_dropout": cfg.activation_dropout,
@@ -591,6 +592,7 @@ class Wav2VecEncoder(FairseqEncoder):
             "source": source,
             "padding_mask": padding_mask,
             "mask": self.apply_mask and self.training,
+            "quantize": self.quantize
         }
         if "corpus_key" in kwargs:
             w2v_args["corpus_key"] = kwargs["corpus_key"]
@@ -601,6 +603,7 @@ class Wav2VecEncoder(FairseqEncoder):
         ft = self.freeze_finetune_updates <= self.num_updates
 
         with torch.no_grad() if not ft else contextlib.ExitStack():
+            print("check?")
             res = self.w2v_model.extract_features(**w2v_args)
 
             x = res["x"]
