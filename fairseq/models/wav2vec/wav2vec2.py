@@ -28,6 +28,7 @@ from fairseq.modules import (
     RelPositionalEncoding,
     SamePad,
     TransposeLast,
+    QConv1d,
 )
 from fairseq.modules.checkpoint_activations import checkpoint_wrapper
 from fairseq.modules.conformer_layer import ConformerWav2Vec2EncoderLayer
@@ -303,14 +304,14 @@ class Wav2Vec2Config(FairseqDataclass):
     adp_trf_idx: str = field(
         default="all",
     )
-
+    quantize: bool = field(default=False, metadata={"help": "quaantize the model"})
 
 @register_model("wav2vec2", dataclass=Wav2Vec2Config)
 class Wav2Vec2Model(BaseFairseqModel):
     def __init__(self, cfg: Wav2Vec2Config):
         super().__init__()
         self.cfg = cfg
-
+        self.quantize = cfg.quantize
         feature_enc_layers = eval(cfg.conv_feature_layers)
         self.embed = feature_enc_layers[-1][0]
 
@@ -319,6 +320,7 @@ class Wav2Vec2Model(BaseFairseqModel):
             dropout=0.0,
             mode=cfg.extractor_mode,
             conv_bias=cfg.conv_bias,
+            quantize = cfg.quantize,
         )
 
         self.post_extract_proj = (
@@ -848,9 +850,10 @@ class ConvFeatureExtractionModel(nn.Module):
         dropout: float = 0.0,
         mode: str = "default",
         conv_bias: bool = False,
+        quantize: bool = False,
     ):
         super().__init__()
-
+        self.quantize = quantize
         assert mode in {"default", "layer_norm"}
 
         def block(
@@ -863,7 +866,7 @@ class ConvFeatureExtractionModel(nn.Module):
             conv_bias=False,
         ):
             def make_conv():
-                conv = nn.Conv1d(n_in, n_out, k, stride=stride, bias=conv_bias)
+                conv = nn.Conv1d(n_in, n_out, k, stride=stride, bias=conv_bias) if not quantize else QConv1d(n_in, n_out, k, stride=stride, bias=conv_bias)
                 nn.init.kaiming_normal_(conv.weight)
                 return conv
 
@@ -924,6 +927,12 @@ class ConvFeatureExtractionModel(nn.Module):
 
 def make_conv_pos(e, k, g, is_batch_norm=False):
     pos_conv = nn.Conv1d(
+        e,
+        e,
+        kernel_size=k,
+        padding=k // 2,
+        groups=g,
+    ) if not self.quantize else QConv1d(
         e,
         e,
         kernel_size=k,
@@ -1022,16 +1031,23 @@ class TransformerEncoder(nn.Module):
             k = max(3, args.conv_pos // num_layers)
 
             def make_conv_block(e, k, g, l):
-                return nn.Sequential(
-                    *[
-                        nn.Sequential(
-                            nn.Conv1d(
+                conv_module = nn.Conv1d(
                                 e,
                                 e,
                                 kernel_size=k,
                                 padding=k // 2,
                                 groups=g,
-                            ),
+                            ) if not cfg.quantize else QConv1d(
+                                e,
+                                e,
+                                kernel_size=k,
+                                padding=k // 2,
+                                groups=g,
+                            )
+                return nn.Sequential(
+                    *[
+                        nn.Sequential(
+                            conv_module,
                             SamePad(k),
                             TransposeLast(),
                             LayerNorm(e, elementwise_affine=False),

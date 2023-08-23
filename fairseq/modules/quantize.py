@@ -217,7 +217,7 @@ class QConv2d(nn.Conv2d):
         self.quantize_input = QuantMeasure(shape_measure=(1, 1, 1, 1), flatten_dims=(1, -1))
         self.stride = stride
 
-    def forward(self, input, num_bits, num_grad_bits):
+    def forward(self, input, num_bits = 8, num_grad_bits = 8):
         if num_bits == 0:
             output = F.conv2d(input, self.weight, self.bias, self.stride, self.padding, self.dilation, self.groups)
             return output
@@ -251,6 +251,46 @@ class QConv2d(nn.Conv2d):
         return out1 + out2 - out2.detach()
 
 
+class QConv1d(nn.Conv1d):
+    def __init__(self, in_channels, out_channels, kernel_size,
+                 stride=1, padding=0, dilation=1, groups=1, bias=True):
+        super(QConv1d, self).__init__(in_channels, out_channels, kernel_size,
+                                      stride, padding, dilation, groups, bias)
+
+        self.quantize_input = QuantMeasure(shape_measure=(1, 1, 1), flatten_dims=(1, -1))
+        self.stride = stride
+
+    def forward(self, input, num_bits = 8, num_grad_bits = 8):
+        if num_bits == 0:
+            output = F.conv1d(input, self.weight, self.bias, self.stride, self.padding, self.dilation, self.groups)
+            return output
+
+        if self.bias is not None:
+            qbias = quantize(
+                self.bias, num_bits=num_bits,
+                flatten_dims=(0, -1))
+        else:
+            qbias = None
+
+        weight_qparams = calculate_qparams(self.weight, num_bits=num_bits, flatten_dims=(1, -1),
+                                           reduce_dim=None)
+        qweight = quantize(self.weight, qparams=weight_qparams)
+
+        qinput = self.quantize_input(input, num_bits)
+        output = F.conv1d(qinput, qweight, qbias, self.stride, self.padding, self.dilation, self.groups)
+        output = quantize_grad(output, num_bits=num_grad_bits, flatten_dims=(1, -1))
+
+        return output
+
+    def conv1d_quant_act(self, input_fw, input_bw, weight, bias=None, stride=1, padding=0, dilation=1, groups=1,
+                         error_bits=0, gc_bits=0):
+        out1 = F.conv1d(input_fw, weight.detach(), bias.detach() if bias is not None else None,
+                        stride, padding, dilation, groups)
+        out2 = F.conv1d(input_bw.detach(), weight, bias,
+                        stride, padding, dilation, groups)
+        out1 = quantize_grad(out1, num_bits=error_bits)
+        out2 = quantize_grad(out2, num_bits=gc_bits)
+        return out1 + out2 - out2.detach()
 
 if __name__ == '__main__':
     x = torch.rand(2, 3)

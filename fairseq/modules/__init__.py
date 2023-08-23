@@ -50,6 +50,9 @@ from .rotary_positional_embedding import RotaryPositionalEmbedding
 from .positional_encoding import (
     RelPositionalEncoding,
 )
+from .quantize import (
+    QConv1d,
+)
 
 __all__ = [
     "AdaptiveInput",
@@ -103,4 +106,5 @@ __all__ = [
     "RelPositionalEncoding",
     "RotaryPositionalEmbedding",
     "RotaryPositionMultiHeadedAttention",
+    "QConv1d",
 ]

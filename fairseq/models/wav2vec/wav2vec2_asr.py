@@ -407,6 +407,7 @@ class Wav2VecEncoder(FairseqEncoder):
             "encoder_zero_mask": getattr(cfg, "zero_mask", False),
             "inverse_mask": False,
             "learned_alibi_scale": getattr(cfg, "update_alibi", True),
+            "quantize": cfg.quantize,
         }
 
         if cfg.w2v_args is None:
