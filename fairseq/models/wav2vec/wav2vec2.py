@@ -925,14 +925,14 @@ class ConvFeatureExtractionModel(nn.Module):
         return x
 
 
-def make_conv_pos(e, k, g, is_batch_norm=False):
+def make_conv_pos(e, k, g, is_batch_norm=False, quantize=False):
     pos_conv = nn.Conv1d(
         e,
         e,
         kernel_size=k,
         padding=k // 2,
         groups=g,
-    ) if not self.quantize else QConv1d(
+    ) if not quantize else QConv1d(
         e,
         e,
         kernel_size=k,
@@ -1037,7 +1037,7 @@ class TransformerEncoder(nn.Module):
                                 kernel_size=k,
                                 padding=k // 2,
                                 groups=g,
-                            ) if not cfg.quantize else QConv1d(
+                            ) if not args.quantize else QConv1d(
                                 e,
                                 e,
                                 kernel_size=k,
@@ -1070,6 +1070,7 @@ class TransformerEncoder(nn.Module):
                 is_batch_norm=args.conv_pos_batch_norm
                 if hasattr(args, "conv_pos_batch_norm")
                 else False,
+                quantize = args.quantize
             )
 
         self.layers = nn.ModuleList(
