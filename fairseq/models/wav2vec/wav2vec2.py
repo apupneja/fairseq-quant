@@ -326,7 +326,7 @@ class Wav2Vec2Model(BaseFairseqModel):
         )
 
         self.post_extract_proj = (
-            nn.Linear(self.embed, cfg.encoder_embed_dim)
+            nn.Linear(self.embed, cfg.encoder_embed_dim) if not cfg.quantize else QLinear(self.embed, cfg.encoder_embed_dim)
             if self.embed != cfg.encoder_embed_dim and not cfg.quantize_input
             else None
         )
@@ -417,7 +417,7 @@ class Wav2Vec2Model(BaseFairseqModel):
                 nn.Linear(final_dim, final_dim * 2), nn.GLU()
             )
 
-        self.final_proj = nn.Linear(cfg.encoder_embed_dim, final_dim)
+        self.final_proj = nn.Linear(cfg.encoder_embed_dim, final_dim) if not cfg.quantize else QLinear(cfg.encoder_embed_dim, final_dim)
 
     def upgrade_state_dict_named(self, state_dict, name):
         super().upgrade_state_dict_named(state_dict, name)
