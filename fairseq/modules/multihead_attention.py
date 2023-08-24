@@ -22,6 +22,7 @@ except ImportError:
 from fairseq import utils
 from fairseq.modules.fairseq_dropout import FairseqDropout
 from fairseq.modules.quant_noise import quant_noise
+from fairseq.modules.quantize import QLinear
 from fairseq.models.fairseq_incremental_decoder import FairseqIncrementalDecoder
 
 
@@ -81,6 +82,7 @@ class MultiheadAttention(FairseqIncrementalDecoder):
         dictionary=None,
         q_noise=0.0,
         qn_block_size=8,
+        quantize=False
         # TODO: pass in config rather than string.
         # config defined in xformers.components.attention.AttentionConfig
         xformers_att_config: Optional[str] = None,
@@ -122,16 +124,24 @@ class MultiheadAttention(FairseqIncrementalDecoder):
 
         self.k_proj = quant_noise(
             nn.Linear(self.kdim, embed_dim, bias=bias), q_noise, qn_block_size
+        ) if not quantize else quant_noise(
+            QLinear(self.kdim, embed_dim, bias=bias), q_noise, qn_block_size
         )
         self.v_proj = quant_noise(
             nn.Linear(self.vdim, embed_dim, bias=bias), q_noise, qn_block_size
+        ) if not quantize else quant_noise(
+            QLinear(self.vdim, embed_dim, bias=bias), q_noise, qn_block_size
         )
         self.q_proj = quant_noise(
             nn.Linear(embed_dim, embed_dim, bias=bias), q_noise, qn_block_size
+        ) if not quantize else quant_noise(
+            QLinear(embed_dim, embed_dim, bias=bias), q_noise, qn_block_size
         )
 
         self.out_proj = quant_noise(
             nn.Linear(embed_dim, embed_dim, bias=bias), q_noise, qn_block_size
+        ) if not quantize else quant_noise(
+            QLinear(embed_dim, embed_dim, bias=bias), q_noise, qn_block_size
         )
 
         if add_bias_kv:

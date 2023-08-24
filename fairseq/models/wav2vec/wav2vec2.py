@@ -29,6 +29,7 @@ from fairseq.modules import (
     SamePad,
     TransposeLast,
     QConv1d,
+    QLinear,
 )
 from fairseq.modules.checkpoint_activations import checkpoint_wrapper
 from fairseq.modules.conformer_layer import ConformerWav2Vec2EncoderLayer
@@ -966,6 +967,7 @@ class TransformerEncoder(nn.Module):
                 activation_dropout=args.activation_dropout,
                 activation_fn=args.activation_fn,
                 layer_norm_first=args.layer_norm_first,
+                quantize=args.quantize,
             )
         elif args.layer_type == "conformer":
             layer = ConformerWav2Vec2EncoderLayer(
@@ -1011,6 +1013,7 @@ class TransformerEncoder(nn.Module):
                     activation_dropout=args.activation_dropout,
                     activation_fn=args.activation_fn,
                     layer_norm_first=args.layer_norm_first,
+                    quantize=args.quantize,
                 )
 
         layer = fsdp_wrap(layer)
@@ -1291,6 +1294,7 @@ class TransformerSentenceEncoderLayer(nn.Module):
         activation_dropout: float = 0.1,
         activation_fn: str = "relu",
         layer_norm_first: bool = False,
+        quantize: bool = False,
     ) -> None:
 
         super().__init__()
@@ -1306,6 +1310,7 @@ class TransformerSentenceEncoderLayer(nn.Module):
             num_attention_heads,
             dropout=attention_dropout,
             self_attention=True,
+            quantize=quantize
         )
 
         self.dropout1 = nn.Dropout(dropout)
@@ -1316,8 +1321,8 @@ class TransformerSentenceEncoderLayer(nn.Module):
 
         # layer norm associated with the self attention layer
         self.self_attn_layer_norm = LayerNorm(self.embedding_dim)
-        self.fc1 = nn.Linear(self.embedding_dim, ffn_embedding_dim)
-        self.fc2 = nn.Linear(ffn_embedding_dim, self.embedding_dim)
+        self.fc1 = nn.Linear(self.embedding_dim, ffn_embedding_dim) if not quantize else QLinear(self.embedding_dim, ffn_embedding_dim)
+        self.fc2 = nn.Linear(ffn_embedding_dim, self.embedding_dim) if not quantize else QLinear(ffn_embedding_dim, self.embedding_dim)
 
         # layer norm associated with the position wise feed-forward NN
         self.final_layer_norm = LayerNorm(self.embedding_dim)

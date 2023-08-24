@@ -52,6 +52,7 @@ from .positional_encoding import (
 )
 from .quantize import (
     QConv1d,
+    QLinear,
 )
 
 __all__ = [
@@ -107,4 +108,5 @@ __all__ = [
     "RotaryPositionalEmbedding",
     "RotaryPositionMultiHeadedAttention",
     "QConv1d",
+    "QLinear",
 ]

@@ -292,6 +292,39 @@ class QConv1d(nn.Conv1d):
         out2 = quantize_grad(out2, num_bits=gc_bits)
         return out1 + out2 - out2.detach()
 
+class QLinear(nn.Linear):
+    def __init__(self, in_features, out_features, bias=True):
+        super(QLinear, self).__init__(in_features, out_features, bias)
+
+    def forward(self, input, num_bits=8, num_grad_bits=8):
+        if num_bits == 0:
+            output = F.linear(input, self.weight, self.bias)
+            return output
+
+        if self.bias is not None:
+            qbias = quantize(
+                self.bias, num_bits=num_bits,
+                flatten_dims=(0, -1))
+        else:
+            qbias = None
+
+        weight_qparams = calculate_qparams(self.weight, num_bits=num_bits, flatten_dims=(1, -1),
+                                           reduce_dim=None)
+        qweight = quantize(self.weight, qparams=weight_qparams)
+
+        qinput = quantize(input, num_bits=num_bits)
+        output = F.linear(qinput, qweight, qbias)
+        output = quantize_grad(output, num_bits=num_grad_bits, flatten_dims=(1, -1))
+
+        return output
+
+    def linear_quant_act(self, input_fw, input_bw, weight, bias=None, error_bits=0, gc_bits=0):
+        out1 = F.linear(input_fw, weight.detach(), bias.detach() if bias is not None else None)
+        out2 = F.linear(input_bw.detach(), weight, bias)
+        out1 = quantize_grad(out1, num_bits=error_bits)
+        out2 = quantize_grad(out2, num_bits=gc_bits)
+        return out1 + out2 - out2.detach()
+
 if __name__ == '__main__':
     x = torch.rand(2, 3)
     x_q = quantize(x, flatten_dims=(-1), num_bits=8, dequantize=True)
