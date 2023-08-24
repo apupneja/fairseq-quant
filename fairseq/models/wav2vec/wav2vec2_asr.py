@@ -29,7 +29,7 @@ from fairseq.models import (
     register_model,
 )
 from fairseq.models.wav2vec.wav2vec2 import MASKING_DISTRIBUTION_CHOICES, LAYER_TYPE_CHOICES, AdapterFast
-from fairseq.modules import LayerNorm, PositionalEmbedding, TransformerDecoderLayer
+from fairseq.modules import LayerNorm, PositionalEmbedding, TransformerDecoderLayer, QLinear
 from fairseq.tasks import FairseqTask
 
 logger = logging.getLogger(__name__)
@@ -496,7 +496,7 @@ class Wav2VecEncoder(FairseqEncoder):
             targ_d = cfg.decoder_embed_dim
 
         if targ_d is not None:
-            self.proj = Linear(d, targ_d)
+            self.proj = Linear(d, targ_d, self.quantize)
 
         if cfg.freeze_regex is not None:
             self.freeze_regex(cfg.freeze_regex)
@@ -872,8 +872,8 @@ def Embedding(num_embeddings, embedding_dim, padding_idx):
     return m
 
 
-def Linear(in_features, out_features, bias=True):
-    m = nn.Linear(in_features, out_features, bias)
+def Linear(in_features, out_features, bias=True, quantize=False):
+    m = nn.Linear(in_features, out_features, bias) if not quantize else QLinear(in_features, out_features, bias)
     nn.init.xavier_uniform_(m.weight)
     if bias:
         nn.init.constant_(m.bias, 0.0)
