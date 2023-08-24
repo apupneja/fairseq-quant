@@ -82,7 +82,7 @@ class MultiheadAttention(FairseqIncrementalDecoder):
         dictionary=None,
         q_noise=0.0,
         qn_block_size=8,
-        quantize=False
+        quantize=False,
         # TODO: pass in config rather than string.
         # config defined in xformers.components.attention.AttentionConfig
         xformers_att_config: Optional[str] = None,

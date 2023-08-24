@@ -296,6 +296,8 @@ class QLinear(nn.Linear):
     def __init__(self, in_features, out_features, bias=True):
         super(QLinear, self).__init__(in_features, out_features, bias)
 
+        self.quantize_input = QuantMeasure(shape_measure=(1, 1), flatten_dims=(1, -1))
+
     def forward(self, input, num_bits=8, num_grad_bits=8):
         if num_bits == 0:
             output = F.linear(input, self.weight, self.bias)
@@ -312,7 +314,7 @@ class QLinear(nn.Linear):
                                            reduce_dim=None)
         qweight = quantize(self.weight, qparams=weight_qparams)
 
-        qinput = quantize(input, num_bits=num_bits)
+        qinput = self.quantize_input(input, num_bits)
         output = F.linear(qinput, qweight, qbias)
         output = quantize_grad(output, num_bits=num_grad_bits, flatten_dims=(1, -1))
 
