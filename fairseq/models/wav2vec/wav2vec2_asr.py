@@ -548,7 +548,7 @@ class Wav2VecEncoder(FairseqEncoder):
                     }
                     assert isinstance(module, FullyShardedDataParallel)
                     with module.summon_full_params():
-                        module.load_state_dict(new_dict, strict=True)
+                        module.load_state_dict(new_dict, strict=False)
                     module._reset_lazy_init()
 
             # Once layers are loaded, filter them out and load everything else.
@@ -580,7 +580,7 @@ class Wav2VecEncoder(FairseqEncoder):
                         del state["model"][k]
 
             print(model)
-            model.load_state_dict(state["model"], strict=True)
+            model.load_state_dict(state["model"], strict=False)
 
     def set_num_updates(self, num_updates):
         """Set the number of parameters updates."""
@@ -603,8 +603,6 @@ class Wav2VecEncoder(FairseqEncoder):
         ft = self.freeze_finetune_updates <= self.num_updates
 
         with torch.no_grad() if not ft else contextlib.ExitStack():
-            print("check?")
-            print(self.quantize)
             res = self.w2v_model.extract_features(**w2v_args)
 
             x = res["x"]
