@@ -53,6 +53,7 @@ from .positional_encoding import (
 from .quantize import (
     QConv1d,
     QLinear,
+    QLayerNorm,
 )
 
 __all__ = [
@@ -109,4 +110,5 @@ __all__ = [
     "RotaryPositionMultiHeadedAttention",
     "QConv1d",
     "QLinear",
+    "QLayerNorm",
 ]

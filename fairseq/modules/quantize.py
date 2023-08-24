@@ -327,6 +327,20 @@ class QLinear(nn.Linear):
         out2 = quantize_grad(out2, num_bits=gc_bits)
         return out1 + out2 - out2.detach()
 
+class QLayerNorm(nn.LayerNorm):
+    def __init__(self, normalized_shape, eps=1e-5, elementwise_affine=True):
+        super(QLayerNorm, self).__init__(normalized_shape, eps=eps, elementwise_affine=elementwise_affine)
+        self.quantize_input = QuantMeasure(shape_measure=(1, 1, 1, 1), flatten_dims=(1, -1))
+
+    def forward(self, input, num_bits=8):
+        if num_bits == 0:
+            return super(QLayerNorm, self).forward(input)
+        
+        qinput = self.quantize_input(input, num_bits)
+        output = super(QLayerNorm, self).forward(qinput)
+        return quantize_grad(output, num_bits=num_bits, flatten_dims=(1, -1))
+
+
 if __name__ == '__main__':
     x = torch.rand(2, 3)
     x_q = quantize(x, flatten_dims=(-1), num_bits=8, dequantize=True)
