@@ -380,7 +380,7 @@ class Wav2Vec2Model(BaseFairseqModel):
             )
             self.project_q = nn.Linear(vq_dim, final_dim)
         else:
-            self.project_q = nn.Linear(self.embed, final_dim)
+            self.project_q = nn.Linear(self.embed, final_dim) if not cfg.quantize else QLinear(self.embed, final_dim)
 
         if cfg.quantize_input:
             if cfg.same_quantizer and self.quantizer is not None:
