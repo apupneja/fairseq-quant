@@ -280,7 +280,7 @@ class QConv1d(nn.Conv1d):
         output = F.conv1d(qinput, qweight, qbias, self.stride, self.padding, self.dilation, self.groups)
         output = quantize_grad(output, num_bits=num_grad_bits, flatten_dims=(1, -1))
 
-        return output
+        return output.clone()
 
     def conv1d_quant_act(self, input_fw, input_bw, weight, bias=None, stride=1, padding=0, dilation=1, groups=1,
                          error_bits=0, gc_bits=0):
@@ -309,16 +309,15 @@ class QLinear(nn.Linear):
                 flatten_dims=(0, -1))
         else:
             qbias = None
-
+        
         weight_qparams = calculate_qparams(self.weight, num_bits=num_bits, flatten_dims=(1, -1),
                                            reduce_dim=None)
         qweight = quantize(self.weight, qparams=weight_qparams)
-
         qinput = self.quantize_input(input, num_bits)
         output = F.linear(qinput, qweight, qbias)
         output = quantize_grad(output, num_bits=num_grad_bits, flatten_dims=(1, -1))
 
-        return output
+        return output.clone()
 
     def linear_quant_act(self, input_fw, input_bw, weight, bias=None, error_bits=0, gc_bits=0):
         out1 = F.linear(input_fw, weight.detach(), bias.detach() if bias is not None else None)
@@ -338,11 +337,13 @@ class QLayerNorm(nn.LayerNorm):
         
         qinput = self.quantize_input(input, num_bits)
         output = super(QLayerNorm, self).forward(qinput)
-        return quantize_grad(output, num_bits=num_bits, flatten_dims=(1, -1))
-
-
+        return quantize_grad(output, num_bits=num_bits, flatten_dims=(1, -1))                     
+                          
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if __name__ == '__main__':
-    x = torch.rand(2, 3)
-    x_q = quantize(x, flatten_dims=(-1), num_bits=8, dequantize=True)
-    print(x)
-    print(x_q)
+    m = nn.Linear(2, 1).to(device)
+    mm = QLinear(2,1).to(device)
+    input = torch.randn(1, 2).to(device)
+    print(m(input))
+    print(mm(input))
+    
