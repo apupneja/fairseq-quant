@@ -306,14 +306,17 @@ class Wav2Vec2Config(FairseqDataclass):
     adp_trf_idx: str = field(
         default="all",
     )
-    quantize: bool = field(default=False, metadata={"help": "quaantize the model"})
+    quantize_attention: bool = field(default=False, metadata={"help": "quaantize the attention"})
+    quantize_conv: bool = field(default=False, metadata={"help": "quaantize the conv"})
 
 @register_model("wav2vec2", dataclass=Wav2Vec2Config)
 class Wav2Vec2Model(BaseFairseqModel):
     def __init__(self, cfg: Wav2Vec2Config):
         super().__init__()
         self.cfg = cfg
-        self.quantize = cfg.quantize
+        self.quantize_attention = cfg.quantize_attention
+        self.quantize_conv = cfg.quantize_conv
+
         feature_enc_layers = eval(cfg.conv_feature_layers)
         self.embed = feature_enc_layers[-1][0]
 
@@ -322,11 +325,11 @@ class Wav2Vec2Model(BaseFairseqModel):
             dropout=0.0,
             mode=cfg.extractor_mode,
             conv_bias=cfg.conv_bias,
-            quantize = cfg.quantize,
+            quantize = cfg.quantize_conv,
         )
 
         self.post_extract_proj = (
-            nn.Linear(self.embed, cfg.encoder_embed_dim) if not cfg.quantize else QLinear(self.embed, cfg.encoder_embed_dim)
+            nn.Linear(self.embed, cfg.encoder_embed_dim) if not cfg.quantize_attention else QLinear(self.embed, cfg.encoder_embed_dim)
             if self.embed != cfg.encoder_embed_dim and not cfg.quantize_input
             else None
         )
@@ -409,7 +412,7 @@ class Wav2Vec2Model(BaseFairseqModel):
             encoder_cls = ConformerEncoder
 
         self.encoder = encoder_cls(cfg)
-        self.layer_norm = LayerNorm(self.embed) if not self.quantize else QLayerNorm(self.embed)
+        self.layer_norm = LayerNorm(self.embed) if not self.quantize_attention else QLayerNorm(self.embed)
 
         self.target_glu = None
         if cfg.target_glu:
@@ -417,7 +420,7 @@ class Wav2Vec2Model(BaseFairseqModel):
                 nn.Linear(final_dim, final_dim * 2), nn.GLU()
             )
 
-        self.final_proj = nn.Linear(cfg.encoder_embed_dim, final_dim) if not cfg.quantize else QLinear(cfg.encoder_embed_dim, final_dim)
+        self.final_proj = nn.Linear(cfg.encoder_embed_dim, final_dim) if not cfg.quantize_attention else QLinear(cfg.encoder_embed_dim, final_dim)
 
     def upgrade_state_dict_named(self, state_dict, name):
         super().upgrade_state_dict_named(state_dict, name)
@@ -968,7 +971,7 @@ class TransformerEncoder(nn.Module):
                 activation_dropout=args.activation_dropout,
                 activation_fn=args.activation_fn,
                 layer_norm_first=args.layer_norm_first,
-                quantize=args.quantize,
+                quantize=args.quantize_attention,
             )
         elif args.layer_type == "conformer":
             layer = ConformerWav2Vec2EncoderLayer(
@@ -1014,7 +1017,7 @@ class TransformerEncoder(nn.Module):
                     activation_dropout=args.activation_dropout,
                     activation_fn=args.activation_fn,
                     layer_norm_first=args.layer_norm_first,
-                    quantize=args.quantize,
+                    quantize=args.quantize_attention,
                 )
 
         layer = fsdp_wrap(layer)
@@ -1041,7 +1044,7 @@ class TransformerEncoder(nn.Module):
                                 kernel_size=k,
                                 padding=k // 2,
                                 groups=g,
-                            ) if not args.quantize else QConv1d(
+                            ) if not args.quantize_conv else QConv1d(
                                 e,
                                 e,
                                 kernel_size=k,
@@ -1075,14 +1078,14 @@ class TransformerEncoder(nn.Module):
                 is_batch_norm=args.conv_pos_batch_norm
                 if hasattr(args, "conv_pos_batch_norm")
                 else False,
-                quantize = args.quantize
+                quantize = args.quantize_conv
             )
 
         self.layers = nn.ModuleList(
             [self.build_encoder_layer(args, layer_idx=ii) for ii in range(args.encoder_layers)]
         )
         self.layer_norm_first = args.layer_norm_first
-        self.layer_norm = LayerNorm(self.embedding_dim) if not args.quantize else QLayerNorm(self.embedding_dim)
+        self.layer_norm = LayerNorm(self.embedding_dim) if not args.quantize_attention else QLayerNorm(self.embedding_dim)
         self.layerdrop = args.encoder_layerdrop
 
         self.apply(init_bert_params)

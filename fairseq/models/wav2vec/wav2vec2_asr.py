@@ -198,7 +198,8 @@ class Wav2Vec2AsrConfig(FairseqDataclass):
     freeze_regex: Optional[str] = field(
         default=None,
     )
-    quantize: bool = field(default=False, metadata={"help": "quaantize the model"})
+    quantize_attention: bool = field(default=False, metadata={"help": "quaantize the attention"})
+    quantize_conv: bool = field(default=False, metadata={"help": "quaantize the conv"})
 
 @dataclass
 class Wav2Vec2CtcConfig(Wav2Vec2AsrConfig):
@@ -370,7 +371,9 @@ class Wav2Vec2Seq2SeqModel(FairseqEncoderDecoderModel):
 class Wav2VecEncoder(FairseqEncoder):
     def __init__(self, cfg: Wav2Vec2AsrConfig, output_size=None):
         self.apply_mask = cfg.apply_mask
-        self.quantize = cfg.quantize
+        self.quantize_attention = cfg.quantize_attention
+        self.quantize_conv = cfg.quantize_conv
+
         arg_overrides = {
             "dropout": cfg.dropout,
             "activation_dropout": cfg.activation_dropout,
@@ -407,7 +410,8 @@ class Wav2VecEncoder(FairseqEncoder):
             "encoder_zero_mask": getattr(cfg, "zero_mask", False),
             "inverse_mask": False,
             "learned_alibi_scale": getattr(cfg, "update_alibi", True),
-            "quantize": cfg.quantize,
+            "quantize_attention": cfg.quantize_attention,
+            "quantize_conv" : cfg.quantize_conv,
         }
 
         if cfg.w2v_args is None:
@@ -496,7 +500,7 @@ class Wav2VecEncoder(FairseqEncoder):
             targ_d = cfg.decoder_embed_dim
 
         if targ_d is not None:
-            self.proj = Linear(d, targ_d, self.quantize)
+            self.proj = Linear(d, targ_d)
 
         if cfg.freeze_regex is not None:
             self.freeze_regex(cfg.freeze_regex)
