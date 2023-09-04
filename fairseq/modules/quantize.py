@@ -101,7 +101,7 @@ class UniformQuantizeGrad(InplaceFunction):
         ctx.dequantize = dequantize
         ctx.reduce_dim = reduce_dim
         ctx.inplace = False
-        return input
+        return input.clone()
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -280,7 +280,7 @@ class QConv1d(nn.Conv1d):
         output = F.conv1d(qinput, qweight, qbias, self.stride, self.padding, self.dilation, self.groups)
         output = quantize_grad(output, num_bits=num_grad_bits, flatten_dims=(1, -1))
 
-        return output.clone()
+        return output
 
     def conv1d_quant_act(self, input_fw, input_bw, weight, bias=None, stride=1, padding=0, dilation=1, groups=1,
                          error_bits=0, gc_bits=0):
@@ -317,7 +317,7 @@ class QLinear(nn.Linear):
         output = F.linear(qinput, qweight, qbias)
         output = quantize_grad(output, num_bits=num_grad_bits, flatten_dims=(1, -1))
 
-        return output.clone()
+        return output
 
     def linear_quant_act(self, input_fw, input_bw, weight, bias=None, error_bits=0, gc_bits=0):
         out1 = F.linear(input_fw, weight.detach(), bias.detach() if bias is not None else None)
@@ -341,9 +341,46 @@ class QLayerNorm(nn.LayerNorm):
                           
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if __name__ == '__main__':
-    m = nn.Linear(2, 1).to(device)
-    mm = QLinear(2,1).to(device)
-    input = torch.randn(1, 2).to(device)
-    print(m(input))
-    print(mm(input))
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    # Define the input size and output size
+    input_size = 2
+    output_size = 1
+    learning_rate = 0.01
+    num_epochs = 100
+
+    # Create dummy data and move it to the GPU
+    X = torch.randn(100, input_size).to(device)
+    Y = torch.randn(100, output_size).to(device)
+
+    # Create a single-layer neural network with a linear layer and move it to the GPU
+    model = nn.Sequential(
+        QLinear(input_size, output_size)
+    ).to(device)
+
+    # Define the loss function and optimizer
+    criterion = nn.MSELoss()
+    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+
+    # Training loop
+    for epoch in range(num_epochs):
+        # Forward pass
+        outputs = model(X)
+
+        # Compute the loss
+        loss = criterion(outputs, Y)
+
+        # Backpropagation and optimization
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        # Print the loss at every 10 epochs
+        if (epoch + 1) % 10 == 0:
+            print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
+
+    # Test the model with some dummy input on the GPU
+    test_input = torch.randn(1, input_size).to(device)
+    predicted_output = model(test_input)
+    print(f'Predicted Output: {predicted_output.item()}')
     

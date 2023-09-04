@@ -412,7 +412,7 @@ class Wav2Vec2Model(BaseFairseqModel):
             encoder_cls = ConformerEncoder
 
         self.encoder = encoder_cls(cfg)
-        self.layer_norm = LayerNorm(self.embed) if not self.quantize_attention else QLayerNorm(self.embed)
+        self.layer_norm = LayerNorm(self.embed)
 
         self.target_glu = None
         if cfg.target_glu:
@@ -1051,7 +1051,7 @@ class TransformerEncoder(nn.Module):
                                 padding=k // 2,
                                 groups=g,
                             )
-                layer_norm = LayerNorm(e, elementwise_affine=False) if not args.quantize else QLayerNorm(e, elementwise_affine=False)
+                layer_norm = LayerNorm(e, elementwise_affine=False) 
                 return nn.Sequential(
                     *[
                         nn.Sequential(
@@ -1085,7 +1085,7 @@ class TransformerEncoder(nn.Module):
             [self.build_encoder_layer(args, layer_idx=ii) for ii in range(args.encoder_layers)]
         )
         self.layer_norm_first = args.layer_norm_first
-        self.layer_norm = LayerNorm(self.embedding_dim) if not args.quantize_attention else QLayerNorm(self.embedding_dim)
+        self.layer_norm = LayerNorm(self.embedding_dim) 
         self.layerdrop = args.encoder_layerdrop
 
         self.apply(init_bert_params)
@@ -1325,12 +1325,12 @@ class TransformerSentenceEncoderLayer(nn.Module):
         self.layer_norm_first = layer_norm_first
 
         # layer norm associated with the self attention layer
-        self.self_attn_layer_norm = LayerNorm(self.embedding_dim) if not quantize else QLayerNorm(self.embedding_dim)
+        self.self_attn_layer_norm = LayerNorm(self.embedding_dim)
         self.fc1 = nn.Linear(self.embedding_dim, ffn_embedding_dim) if not quantize else QLinear(self.embedding_dim, ffn_embedding_dim)
         self.fc2 = nn.Linear(ffn_embedding_dim, self.embedding_dim) if not quantize else QLinear(ffn_embedding_dim, self.embedding_dim)
 
         # layer norm associated with the position wise feed-forward NN
-        self.final_layer_norm = LayerNorm(self.embedding_dim) if not quantize else QLayerNorm(self.embedding_dim)
+        self.final_layer_norm = LayerNorm(self.embedding_dim) 
 
     def forward(
         self,

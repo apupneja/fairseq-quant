@@ -876,7 +876,7 @@ def Embedding(num_embeddings, embedding_dim, padding_idx):
     return m
 
 
-def Linear(in_features, out_features, bias=True, quantize=True):
+def Linear(in_features, out_features, bias=True, quantize=False):
     m = nn.Linear(in_features, out_features, bias) if not quantize else QLinear(in_features, out_features, bias)
     nn.init.xavier_uniform_(m.weight)
     if bias:
