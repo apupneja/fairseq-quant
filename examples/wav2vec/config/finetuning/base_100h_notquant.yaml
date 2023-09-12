@@ -58,5 +58,5 @@ model:
   activation_dropout: 0.1
   feature_grad_mult: 0.0
   freeze_finetune_updates: 0
-  quantize_attention: True
+  quantize_attention: False
   quantize_conv: False
