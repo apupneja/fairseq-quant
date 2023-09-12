@@ -4,7 +4,7 @@ common:
   fp16: false
   log_format: json
   log_interval: 200
-  tensorboard_logdir: /home/zyu401_shadow/fairseq-quant/logs
+  tensorboard_logdir: /home/zyu401_shadow/fairseq-quant/logs/notquant
 
 checkpoint:
   no_epoch_checkpoints: true
