@@ -200,6 +200,7 @@ class Wav2Vec2AsrConfig(FairseqDataclass):
     )
     quantize_attention: bool = field(default=False, metadata={"help": "quaantize the attention"})
     quantize_conv: bool = field(default=False, metadata={"help": "quaantize the conv"})
+    lora_adp: bool = field(default=False, metadata={"help": "LoRA adapter for the model"})
 
 @dataclass
 class Wav2Vec2CtcConfig(Wav2Vec2AsrConfig):
@@ -373,6 +374,7 @@ class Wav2VecEncoder(FairseqEncoder):
         self.apply_mask = cfg.apply_mask
         self.quantize_attention = cfg.quantize_attention
         self.quantize_conv = cfg.quantize_conv
+        self.lora_adp = cfg.lora_adp
 
         arg_overrides = {
             "dropout": cfg.dropout,
@@ -412,6 +414,7 @@ class Wav2VecEncoder(FairseqEncoder):
             "learned_alibi_scale": getattr(cfg, "update_alibi", True),
             "quantize_attention": cfg.quantize_attention,
             "quantize_conv" : cfg.quantize_conv,
+            "lora_adp" : cfg.lora_adp,
         }
 
         if cfg.w2v_args is None:

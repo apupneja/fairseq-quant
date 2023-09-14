@@ -308,6 +308,7 @@ class Wav2Vec2Config(FairseqDataclass):
     )
     quantize_attention: bool = field(default=False, metadata={"help": "quaantize the attention"})
     quantize_conv: bool = field(default=False, metadata={"help": "quaantize the conv"})
+    lora_adp: bool = field(default=False, metadata={"help": "LoRA adapter for the model"})
 
 @register_model("wav2vec2", dataclass=Wav2Vec2Config)
 class Wav2Vec2Model(BaseFairseqModel):
@@ -972,6 +973,7 @@ class TransformerEncoder(nn.Module):
                 activation_fn=args.activation_fn,
                 layer_norm_first=args.layer_norm_first,
                 quantize=args.quantize_attention,
+                lora=args.lora_adp,
             )
         elif args.layer_type == "conformer":
             layer = ConformerWav2Vec2EncoderLayer(
@@ -1018,6 +1020,7 @@ class TransformerEncoder(nn.Module):
                     activation_fn=args.activation_fn,
                     layer_norm_first=args.layer_norm_first,
                     quantize=args.quantize_attention,
+                    lora=args.lora_adp,
                 )
 
         layer = fsdp_wrap(layer)
@@ -1300,6 +1303,7 @@ class TransformerSentenceEncoderLayer(nn.Module):
         activation_fn: str = "relu",
         layer_norm_first: bool = False,
         quantize: bool = False,
+        lora: bool = False
     ) -> None:
 
         super().__init__()
@@ -1315,7 +1319,8 @@ class TransformerSentenceEncoderLayer(nn.Module):
             num_attention_heads,
             dropout=attention_dropout,
             self_attention=True,
-            quantize=quantize
+            quantize=quantize,
+            lora=lora,
         )
 
         self.dropout1 = nn.Dropout(dropout)

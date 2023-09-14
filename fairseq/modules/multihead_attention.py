@@ -23,6 +23,7 @@ from fairseq import utils
 from fairseq.modules.fairseq_dropout import FairseqDropout
 from fairseq.modules.quant_noise import quant_noise
 from fairseq.modules.quantize import QLinear
+from fairseq.modules.lora import Linear
 from fairseq.models.fairseq_incremental_decoder import FairseqIncrementalDecoder
 
 
@@ -83,6 +84,7 @@ class MultiheadAttention(FairseqIncrementalDecoder):
         q_noise=0.0,
         qn_block_size=8,
         quantize=False,
+        lora=False,
         # TODO: pass in config rather than string.
         # config defined in xformers.components.attention.AttentionConfig
         xformers_att_config: Optional[str] = None,
@@ -127,16 +129,32 @@ class MultiheadAttention(FairseqIncrementalDecoder):
         ) if not quantize else quant_noise(
             QLinear(self.kdim, embed_dim, bias=bias), q_noise, qn_block_size
         )
-        self.v_proj = quant_noise(
-            nn.Linear(self.vdim, embed_dim, bias=bias), q_noise, qn_block_size
-        ) if not quantize else quant_noise(
-            QLinear(self.vdim, embed_dim, bias=bias), q_noise, qn_block_size
-        )
-        self.q_proj = quant_noise(
-            nn.Linear(embed_dim, embed_dim, bias=bias), q_noise, qn_block_size
-        ) if not quantize else quant_noise(
-            QLinear(embed_dim, embed_dim, bias=bias), q_noise, qn_block_size
-        )
+
+        if lora :
+            self.v_proj = quant_noise(
+                Linear(self.vdim, embed_dim, bias=bias), q_noise, qn_block_size
+            ) 
+        elif quantize:
+            self.v_proj = quant_noise(
+                QLinear(self.vdim, embed_dim, bias=bias), q_noise, qn_block_size
+            )
+        else:
+            self.v_proj = quant_noise(
+                nn.Linear(self.vdim, embed_dim, bias=bias), q_noise, qn_block_size
+            )
+
+        if lora :
+            self.q_proj = quant_noise(
+                Linear(embed_dim, embed_dim, bias=bias), q_noise, qn_block_size
+            ) 
+        elif quantize:
+            self.q_proj = quant_noise(
+                QLinear(embed_dim, embed_dim, bias=bias), q_noise, qn_block_size
+            )
+        else:
+            self.q_proj = quant_noise(
+                nn.Linear(embed_dim, embed_dim, bias=bias), q_noise, qn_block_size
+            )
 
         self.out_proj = quant_noise(
             nn.Linear(embed_dim, embed_dim, bias=bias), q_noise, qn_block_size

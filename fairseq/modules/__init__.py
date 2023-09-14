@@ -56,6 +56,11 @@ from .quantize import (
     QLayerNorm,
 )
 
+from .lora import (
+    Linear,
+    mark_only_lora_as_trainable,
+)
+
 __all__ = [
     "AdaptiveInput",
     "AdaptiveSoftmax",
@@ -111,4 +116,6 @@ __all__ = [
     "QConv1d",
     "QLinear",
     "QLayerNorm",
+    "Linear",
+    "mark_only_lora_as_trainable",
 ]
