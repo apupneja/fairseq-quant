@@ -39,6 +39,7 @@ from fairseq.file_io import PathManager
 from fairseq.logging import meters, metrics, progress_bar
 from fairseq.model_parallel.megatron_trainer import MegatronTrainer
 from fairseq.trainer import Trainer
+from fairseq.modules.lora import mark_only_lora_as_trainable
 
 
 def main(cfg: FairseqConfig) -> None:
@@ -95,6 +96,12 @@ def main(cfg: FairseqConfig) -> None:
     else:
         model = task.build_model(cfg.model)
     criterion = task.build_criterion(cfg.criterion)
+    if cfg.model.lora_adp :
+        mark_only_lora_as_trainable(model)
+    
+    for n, p in model.named_parameters():
+        if p.requires_grad==True:
+            print(n)
     logger.info(model)
     logger.info("task: {}".format(task.__class__.__name__))
     logger.info("model: {}".format(model.__class__.__name__))

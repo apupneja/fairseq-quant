@@ -20,7 +20,7 @@ dataset:
   num_workers: 6
   max_tokens: 3200000
   skip_invalid_size_inputs_valid_test: true
-  validate_after_updates: 100
+  validate_after_updates: 1000
   valid_subset: test
 
 distributed_training:
@@ -60,3 +60,4 @@ model:
   freeze_finetune_updates: 0
   quantize_attention: True
   quantize_conv: False
+  lora_adp: True
