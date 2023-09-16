@@ -132,7 +132,7 @@ class MultiheadAttention(FairseqIncrementalDecoder):
 
         if lora :
             self.v_proj = quant_noise(
-                Linear(self.vdim, embed_dim, bias=bias, r = 32, lora_alpha = 32), q_noise, qn_block_size
+                Linear(self.vdim, embed_dim, bias=bias, r = 64, lora_alpha = 32), q_noise, qn_block_size
             ) 
         elif quantize:
             self.v_proj = quant_noise(
@@ -145,7 +145,7 @@ class MultiheadAttention(FairseqIncrementalDecoder):
 
         if lora :
             self.q_proj = quant_noise(
-                Linear(embed_dim, embed_dim, bias=bias, r = 32, lora_alpha = 32), q_noise, qn_block_size
+                Linear(embed_dim, embed_dim, bias=bias, r = 64, lora_alpha = 32), q_noise, qn_block_size
             ) 
         elif quantize:
             self.q_proj = quant_noise(

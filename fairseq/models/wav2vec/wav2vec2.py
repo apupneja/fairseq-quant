@@ -36,6 +36,7 @@ from fairseq.modules.checkpoint_activations import checkpoint_wrapper
 from fairseq.modules.conformer_layer import ConformerWav2Vec2EncoderLayer
 from fairseq.modules.transformer_sentence_encoder import init_bert_params
 from fairseq.utils import buffered_arange, index_put, is_xla_tensor
+from fairseq.modules.lora import Linear
 
 from .utils import pad_to_multiple
 
@@ -329,8 +330,15 @@ class Wav2Vec2Model(BaseFairseqModel):
             quantize = cfg.quantize_conv,
         )
 
+        if cfg.lora_adp:
+            post_extract_proj_layer = Linear(self.embed, cfg.encoder_embed_dim, r = 64, lora_alpha = 32)
+        elif cfg.quantize_attention:
+            post_extract_proj_layer = QLinear(self.embed, cfg.encoder_embed_dim)
+        else:
+            post_extract_proj_layer = nn.Linear(self.embed, cfg.encoder_embed_dim)
+
         self.post_extract_proj = (
-            nn.Linear(self.embed, cfg.encoder_embed_dim) if not cfg.quantize_attention else QLinear(self.embed, cfg.encoder_embed_dim)
+            post_extract_proj_layer
             if self.embed != cfg.encoder_embed_dim and not cfg.quantize_input
             else None
         )
@@ -384,7 +392,13 @@ class Wav2Vec2Model(BaseFairseqModel):
             )
             self.project_q = nn.Linear(vq_dim, final_dim)
         else:
-            self.project_q = nn.Linear(self.embed, final_dim) if not cfg.quantize else QLinear(self.embed, final_dim)
+            if cfg.lora_adp:
+                self.project_q = Linear(self.embed, final_dim, r = 64, lora_alpha = 32)
+            elif cfg.quantize_attention:
+                self.project_q = QLinear(self.embed, final_dim)
+            else:
+                self.project_q = nn.Linear(self.embed, final_dim)
+            
 
         if cfg.quantize_input:
             if cfg.same_quantizer and self.quantizer is not None:
@@ -421,7 +435,12 @@ class Wav2Vec2Model(BaseFairseqModel):
                 nn.Linear(final_dim, final_dim * 2), nn.GLU()
             )
 
-        self.final_proj = nn.Linear(cfg.encoder_embed_dim, final_dim) if not cfg.quantize_attention else QLinear(cfg.encoder_embed_dim, final_dim)
+        if cfg.lora_adp:
+            self.final_proj = Linear(cfg.encoder_embed_dim, final_dim, r = 64, lora_alpha = 32)
+        elif cfg.quantize_attention:
+            self.final_proj = QLinear(cfg.encoder_embed_dim, final_dim)
+        else:
+            self.final_proj = nn.Linear(cfg.encoder_embed_dim, final_dim)
 
     def upgrade_state_dict_named(self, state_dict, name):
         super().upgrade_state_dict_named(state_dict, name)
@@ -1331,8 +1350,19 @@ class TransformerSentenceEncoderLayer(nn.Module):
 
         # layer norm associated with the self attention layer
         self.self_attn_layer_norm = LayerNorm(self.embedding_dim)
-        self.fc1 = nn.Linear(self.embedding_dim, ffn_embedding_dim) if not quantize else QLinear(self.embedding_dim, ffn_embedding_dim)
-        self.fc2 = nn.Linear(ffn_embedding_dim, self.embedding_dim) if not quantize else QLinear(ffn_embedding_dim, self.embedding_dim)
+        if cfg.lora:
+            self.fc1 = Linear(self.embedding_dim, ffn_embedding_dim, r = 64, lora_alpha = 32)
+        elif quantize:
+            self.fc1 = QLinear(self.embedding_dim, ffn_embedding_dim)
+        else:
+            self.fc1 = nn.Linear(self.embedding_dim, ffn_embedding_dim)
+        
+        if cfg.lora:
+            self.fc2 = Linear(ffn_embedding_dim, self.embedding_dim, r = 64, lora_alpha = 32)
+        elif quantize:
+            self.fc2 = QLinear(ffn_embedding_dim, self.embedding_dim)
+        else:
+            self.fc2 = nn.Linear(ffn_embedding_dim, self.embedding_dim)
 
         # layer norm associated with the position wise feed-forward NN
         self.final_layer_norm = LayerNorm(self.embedding_dim) 
