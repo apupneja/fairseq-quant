@@ -1350,14 +1350,14 @@ class TransformerSentenceEncoderLayer(nn.Module):
 
         # layer norm associated with the self attention layer
         self.self_attn_layer_norm = LayerNorm(self.embedding_dim)
-        if cfg.lora:
+        if lora:
             self.fc1 = Linear(self.embedding_dim, ffn_embedding_dim, r = 64, lora_alpha = 32)
         elif quantize:
             self.fc1 = QLinear(self.embedding_dim, ffn_embedding_dim)
         else:
             self.fc1 = nn.Linear(self.embedding_dim, ffn_embedding_dim)
         
-        if cfg.lora:
+        if lora:
             self.fc2 = Linear(ffn_embedding_dim, self.embedding_dim, r = 64, lora_alpha = 32)
         elif quantize:
             self.fc2 = QLinear(ffn_embedding_dim, self.embedding_dim)
