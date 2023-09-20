@@ -331,7 +331,7 @@ class Wav2Vec2Model(BaseFairseqModel):
         )
 
         if cfg.lora_adp:
-            post_extract_proj_layer = Linear(self.embed, cfg.encoder_embed_dim, r = 64, lora_alpha = 32)
+            post_extract_proj_layer = Linear(self.embed, cfg.encoder_embed_dim, r = 128, lora_alpha = 32)
         elif cfg.quantize_attention:
             post_extract_proj_layer = QLinear(self.embed, cfg.encoder_embed_dim)
         else:
@@ -393,7 +393,7 @@ class Wav2Vec2Model(BaseFairseqModel):
             self.project_q = nn.Linear(vq_dim, final_dim)
         else:
             if cfg.lora_adp:
-                self.project_q = Linear(self.embed, final_dim, r = 64, lora_alpha = 32)
+                self.project_q = Linear(self.embed, final_dim, r = 128, lora_alpha = 32)
             elif cfg.quantize_attention:
                 self.project_q = QLinear(self.embed, final_dim)
             else:
@@ -436,7 +436,7 @@ class Wav2Vec2Model(BaseFairseqModel):
             )
 
         if cfg.lora_adp:
-            self.final_proj = Linear(cfg.encoder_embed_dim, final_dim, r = 64, lora_alpha = 32)
+            self.final_proj = Linear(cfg.encoder_embed_dim, final_dim, r = 128, lora_alpha = 32)
         elif cfg.quantize_attention:
             self.final_proj = QLinear(cfg.encoder_embed_dim, final_dim)
         else:
@@ -1351,14 +1351,14 @@ class TransformerSentenceEncoderLayer(nn.Module):
         # layer norm associated with the self attention layer
         self.self_attn_layer_norm = LayerNorm(self.embedding_dim)
         if lora:
-            self.fc1 = Linear(self.embedding_dim, ffn_embedding_dim, r = 64, lora_alpha = 32)
+            self.fc1 = Linear(self.embedding_dim, ffn_embedding_dim, r = 128, lora_alpha = 32)
         elif quantize:
             self.fc1 = QLinear(self.embedding_dim, ffn_embedding_dim)
         else:
             self.fc1 = nn.Linear(self.embedding_dim, ffn_embedding_dim)
         
         if lora:
-            self.fc2 = Linear(ffn_embedding_dim, self.embedding_dim, r = 64, lora_alpha = 32)
+            self.fc2 = Linear(ffn_embedding_dim, self.embedding_dim, r = 128, lora_alpha = 32)
         elif quantize:
             self.fc2 = QLinear(ffn_embedding_dim, self.embedding_dim)
         else:
